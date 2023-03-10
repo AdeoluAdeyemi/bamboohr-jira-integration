@@ -14,70 +14,67 @@ since = '2023-01-01'
 
 # Set up Jira Service Desk API request parameters
 jira_api_token = 'ATATT3xFfGF0BUHhlxvkGxsUaS9DUhi6YJFovNL2jzgQnPisAnJh3QO_T0oi5Q9CT65cnULE_RGLil6Gm42L4icgHqOEvUX1JbheAMo0zigdkh5Knbn9YnyJoQPu6kec7YhDcvtab1hpPO7QhV7qW_ZvYkGApXuoKqwSyuOh2jsuJNxaZ7NqEMc=10181ACB'
-jira_url = 'https://hostvisionng.atlassian.net/rest/api/3'
-params = {'projectKey': 'EX', 'requestTypeId': 11}
+jira_url = 'https://hostvisionng.atlassian.net/rest/servicedeskapi/request'
+jira_customer_id = 'qm:d94bc636-9699-4551-9935-f8cfc8bbd23d:3be83321-de1a-4a86-9eef-87bd708a8803' # ID of the Jira Service Desk customer who should be added to the request
+serviceDeskId = 2
+
+params = {'projectKey': 'EX', 'requestTypeId': 30, 'serviceDeskId': 2}
 headers = {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Basic ZGU0ZDE4YzhjMTEyMmJiZDY4YzdkNmMwMDA0ZWFmODM4Mjg4YmRmYzpBZGVvbHUyOCQ='}
 
 #query_params = {'since': '2021-01-01', type: 'inserted'}
 
 # Make API request to retrieve data for all new employees
 
-def fetch_all_new_employees():
-    url = endpoint + f'employees/changed?since={since}T00%3A00%3A00-07%3A00&type=inserted'
+def fetch_all_new_employees(since):
+    date_since_last_sync = since
+    url = endpoint + f'employees/changed?since={date_since_last_sync}T00%3A00%3A00-07%3A00&type=inserted'
     response = requests.get(url, headers=headers)
+
     data = response.json()
 
-employees = json.loads(response.content)['employees']
+    employees = json.loads(response.content)['employees']
 
-def fetch_new_employees_data:
-
-for key, value in employees.items():
-    employee_id = key
-    employee_details_url = endpoint + f"employees/{employee_id}/?fields=firstName%2ClastName%2CjobTitle%2CbestEmail%2ChireDate%2CjobTitle%2Csupervisor%2CterminationDate%2Cstatus%2Clocation%2Cdepartment&onlyCurrent=true"
-
-    # Fetch Employee Details
-    employee_details_response = requests.get(employee_details_url, headers=headers)
-    print(f'url is: {employee_details_url}')
-    
-    employee_details_data = employee_details_response.json()
-    print(employee_details_data)
-
-#Loop through employee data and create Jira Service Desk customer requests
-def create_jira_onboarding_request():
-
+    # Loop through employee directory for newly created employees 
     for key, value in employees.items():
+        employee_id = key
+        employee_details_url = endpoint + f"employees/{employee_id}/?fields=firstName%2ClastName%2CjobTitle%2CbestEmail%2ChireDate%2CjobTitle%2Csupervisor%2CterminationDate%2Cstatus%2Clocation%2Cdepartment&onlyCurrent=true"
+
+        # Fetch Employee Details
+        employee_details_response = requests.get(employee_details_url, headers=headers)
+
+        # Parse the response to json.          
+        employee_details_data = employee_details_response.json()
+        
+        create_jira_onboarding_request(employee_details_data)
+
+        #return(employee_details_data)
+
+# Loop through employee data and create Jira Service Desk customer requests
+def create_jira_onboarding_request(employee_details_data):
+
+    #for key, value in employee_details_data.items():
+    # Construct Jira Service Desk API request payload
+    payload = {
+        'serviceDeskId': params['serviceDeskId'],
+        'requestTypeId': params['requestTypeId'],
+        'requestFieldValues': {'summary': f'Onboard New Employee: {employee_details_data["firstName"]} {employee_details_data["lastName"]}',
+            'description': f'Job Title: {employee_details_data["jobTitle"]}\nEmail: {employee_details_data["bestEmail"]}\nDepartment: {employee_details_data["department"]}\nJob Title: {employee_details_data["jobTitle"]}\nStart Date: {employee_details_data["hireDate"]}\nManager: {employee_details_data["supervisor"]}\nLocation: {employee_details_data["location"]}'
+        }
+        #'requestParticipants': [{'id': jira_customer_id}] 
+    }
+
+    # Send Jira Service Desk API request to create new customer request
+    headers = {'Accept': 'application/json', 'Content-Type': 'application/json', 'Authorization': 'Basic aGVsbG9AaG9zdHZpc2lvbi5uZzpBVEFUVDN4RmZHRjBCVUhobHh2a0d4c1VhUzlEVWhpNllKRm92TkwyanpnUW5QaXNBbkpoM1FPX1Qwb2k1UTlDVDY1Y25VTEVfUkdMaWw2R200Mkw0aWNnSHFPRXZVWDFKYmhlQU1vMHppZ2RraDVLbmJuOVlueUpvUVB1NmtlYzdZaERjdnRhYjFocFBPN1FoVjdxV19adllrR0FwWHVvS3F3U3l1T2gyanN1Sk54YVo3TnFFTWM9MTAxODFBQ0I='}
     
-    # # Construct Jira Service Desk API request payload
-    # payload = {
-    #     'serviceDeskId': 2,
-    #     'requestTypeId': params['requestTypeId'],
-    #     'requestFieldValues': {'summary': f'New Employee: {employee["firstName"]} {employee["lastName"]}',
-    #         'description': f'Job Title: {employee["jobTitle"]}\nEmail: {employee["email"]}'
-    #     },
-    #     'requestParticipants': [{'id': 'your_jira_customer_id'}] # ID of the Jira Service Desk customer who should be added to the request
-    # }
+    print(f'final jira url = {jira_url}')
+    print(f'headers are:  {headers}')
 
-# Parse response and extract relevant data for each new employee
-# data = response.json()
-# new_employee_data = []
-# for employee_data in data:
-#     new_employee_data.append({
-#         'id': employee_data['id'],
-#         'name': employee_data['displayName'],
-#         'department': employee_data['department'],
-#         'jobTitle': employee_data['department'],
-#         'bestEmail': employee_data['department'],
-#         'hireDate': employee_data['department'],
-#         'supervisor': employee_data['department'],
-#         'status': employee_data['department'],
-#         'location': employee_data['department'],
-#         # add more fields as needed
-#     })
-
-# # Store data in a database, file, or data structure as needed
-# # e.g., write data to a file
-# with open('new_employees_data.json', 'w') as fp:
-#     json.dump(data, fp, indent=4, sort_keys=True)
-#     #fp.write(json.dump(result, indent=4, sort_keys=True))
+    response = requests.post(f'{jira_url}', headers=headers, json=payload)
+    if response.status_code == 201:
+        print(f'Customer request created for {employee_details_data["firstName"]} {employee_details_data["lastName"]}')
+    else:
+        print(f'Error creating customer request for {employee_details_data["firstName"]} {employee_details_data["lastName"]}: {response.content}')
 
 
+# Call the fetch_all_new_employees method passing in a last since sync date.
+get_new_employees = fetch_all_new_employees('2023-01-01')
