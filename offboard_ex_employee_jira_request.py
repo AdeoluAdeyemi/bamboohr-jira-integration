@@ -1,6 +1,7 @@
 import requests
 import json
 from dotenv import load_dotenv
+from datetime import datetime, timedelta
 import os
 load_dotenv()
 
@@ -27,8 +28,18 @@ headers = {'Accept': 'application/json', 'Content-Type': 'application/json', 'Au
 
 #query_params = {'since': '2021-01-01', type: 'inserted'}
 
-# Make API request to retrieve data for all employees that are recently terminated
+def setOffboardingDate(last_working_day):
+    # Parse the string to a date
+    date_string = last_working_day
+    date = datetime.strptime(date_string, "%Y-%m-%d").date()
 
+    # Increment the date by 1 day
+    new_date = date + timedelta(days=1)
+
+    # Print the new date in ISO format
+    return new_date.isoformat()
+
+# Make API request to retrieve data for all employees that are recently terminated
 def fetch_all_new_employees(since):
     date_since_last_sync = since
     url = endpoint + f'employees/changed?since={date_since_last_sync}T00%3A00%3A00-07%3A00&type=updated'
@@ -37,7 +48,7 @@ def fetch_all_new_employees(since):
     print(f'Header is {headers}')
     data = response.json()
 
-    print(f'Recently terminated employees ${data}')
+    #print(f'Recently terminated employees ${data}')
 
     employees = json.loads(response.content)['employees']
 
@@ -51,9 +62,10 @@ def fetch_all_new_employees(since):
 
         # Parse the response to json.          
         employee_details_data = employee_details_response.json()
-        print(employee_details_data)
-
-        #create_jira_onboarding_request(employee_details_data)
+        #print(employee_details_data)
+        if employee_details_data["employmentHistoryStatus"] == "Terminated" and employee_details_data["terminationDate"] !="":
+            #print(employee_details_data["terminationDate"])
+            create_jira_onboarding_request(employee_details_data)
 
         #return(employee_details_data)
 
@@ -63,10 +75,11 @@ def create_jira_onboarding_request(employee_details_data):
     #for key, value in employee_details_data.items():
     # Construct Jira Service Desk API request payload
     payload = {
+#        Kelechi to please be offboarded on 12 Dec
         'serviceDeskId': params['serviceDeskId'],
         'requestTypeId': params['requestTypeId'],
-        'requestFieldValues': {'summary': f'Onboard New Employee: {employee_details_data["firstName"]} {employee_details_data["lastName"]}',
-            'description': f'Job Title: {employee_details_data["jobTitle"]}\nEmail: {employee_details_data["bestEmail"]}\nDepartment: {employee_details_data["department"]}\nJob Title: {employee_details_data["jobTitle"]}\nStart Date: {employee_details_data["hireDate"]}\nManager: {employee_details_data["supervisor"]}\nLocation: {employee_details_data["location"]}'
+        'requestFieldValues': {'summary': f'{employee_details_data["firstName"]} {employee_details_data["lastName"]} to be offboarded on {setOffboardingDate(employee_details_data["terminationDate"])}',
+            'description': f'Email: {employee_details_data["bestEmail"]}\nDepartment: {employee_details_data["department"]}\nJob Title: {employee_details_data["jobTitle"]}\nLast Working Date: {setOffboardingDate(employee_details_data["terminationDate"])}\nManager: {employee_details_data["supervisor"]}\nLocation: {employee_details_data["location"]}'
         }
         #'requestParticipants': [{'id': jira_customer_id}] 
     }
